@@ -2,10 +2,19 @@
 
 import sys
 import os
-import markdown
+import re
+
+def markdown_to_html(markdown_text):
+    # Basic conversion of Markdown to HTML
+    html_text = markdown_text
+    html_text = re.sub(r'^# (.*)', r'<h1>\1</h1>', html_text, flags=re.MULTILINE)
+    html_text = re.sub(r'^## (.*)', r'<h2>\1</h2>', html_text, flags=re.MULTILINE)
+    html_text = re.sub(r'^### (.*)', r'<h3>\1</h3>', html_text, flags=re.MULTILINE)
+    html_text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html_text)
+    html_text = re.sub(r'\*(.*?)\*', r'<em>\1</em>', html_text)
+    return html_text
 
 if __name__ == "__main__":
-    # Check if the correct number of arguments is provided
     if len(sys.argv) < 3:
         print("Usage: ./markdown2html.py README.md README.html", file=sys.stderr)
         sys.exit(1)
@@ -13,19 +22,15 @@ if __name__ == "__main__":
     markdown_file = sys.argv[1]
     output_file = sys.argv[2]
 
-    # Check if the Markdown file exists
     if not os.path.exists(markdown_file):
         print(f"Missing {markdown_file}", file=sys.stderr)
         sys.exit(1)
 
-    # Read the Markdown file and convert it to HTML
     with open(markdown_file, "r") as md_file:
         md_content = md_file.read()
-        html_content = markdown.markdown(md_content)
+        html_content = markdown_to_html(md_content)
 
-    # Write the HTML content to the output file
     with open(output_file, "w") as html_file:
         html_file.write(html_content)
 
-    # Exit with success
     sys.exit(0)
