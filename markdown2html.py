@@ -1,36 +1,88 @@
 #!/usr/bin/python3
-
 import sys
-import os
-import re
 
-def markdown_to_html(markdown_text):
-    # Basic conversion of Markdown to HTML
-    html_text = markdown_text
-    html_text = re.sub(r'^# (.*)', r'<h1>\1</h1>', html_text, flags=re.MULTILINE)
-    html_text = re.sub(r'^## (.*)', r'<h2>\1</h2>', html_text, flags=re.MULTILINE)
-    html_text = re.sub(r'^### (.*)', r'<h3>\1</h3>', html_text, flags=re.MULTILINE)
-    html_text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', html_text)
-    html_text = re.sub(r'\*(.*?)\*', r'<em>\1</em>', html_text)
-    return html_text
 
-if __name__ == "__main__":
+def ol_parse(index, lines_read_list):
+    """Parses ordered list lines into HTML."""
+    list_ol = ['<ol>\n']
+    while index < len(lines_read_list):
+        if lines_read_list[index][0] != '*':
+            break
+        data = lines_read_list[index].strip()
+        string_to_parsing = data.lstrip("*").strip()
+        list_ol.append(f'  <li>{string_to_parsing}</li>\n')
+        index += 1
+    list_ol.append('</ol>\n')
+    return index, list_ol
+
+
+def ul_parse(index, lines_read_list):
+    """Parses unordered list lines into HTML."""
+    list_ul = ['<ul>\n']
+    while index < len(lines_read_list):
+        if lines_read_list[index][0] != '-':
+            break
+        data = lines_read_list[index].strip()
+        string_to_parsing = data.lstrip("-").strip()
+        list_ul.append(f'  <li>{string_to_parsing}</li>\n')
+        index += 1
+    list_ul.append('</ul>\n')
+    return index, list_ul
+
+
+def heading_parse(index, lines_read_list):
+    """Parses heading lines into HTML."""
+    list_heading = []
+    while index < len(lines_read_list):
+        if lines_read_list[index][0] != '#':
+            break
+        data = lines_read_list[index].strip()
+        heading_level = len(data) - len(data.lstrip('#'))
+        if 1 <= heading_level <= 6:
+            string_to_parsing = data.lstrip("#").strip()
+            list_heading.append(f'<h{heading_level}>{string_to_parsing}</h{heading_level}>\n')
+        index += 1
+    return index, list_heading
+
+
+funtion_parsing = {
+    '#': heading_parse,
+    '-': ul_parse,
+    '*': ol_parse,
+}
+
+if __name__ == '__main__':
     if len(sys.argv) < 3:
-        print("Usage: ./markdown2html.py README.md README.html", file=sys.stderr)
+        sys.stderr.write('Usage: ./markdown2html.py README.md README.html\n')
         sys.exit(1)
 
-    markdown_file = sys.argv[1]
+    input_file = sys.argv[1]
     output_file = sys.argv[2]
 
-    if not os.path.exists(markdown_file):
-        print(f"Missing {markdown_file}", file=sys.stderr)
+    try:
+        htmlTagList = []
+        with open(input_file, 'r') as markdownFile:
+            lines_read_list = markdownFile.readlines()
+            index = 0
+            while index < len(lines_read_list):
+                line = lines_read_list[index].strip()
+                if not line:
+                    index += 1
+                    continue
+                first_char = line[0]
+                if first_char in funtion_parsing:
+                    index, htmlTag = funtion_parsing[first_char](index, lines_read_list)
+                else:
+                    htmlTag = [f'<p>{line}</p>\n']
+                    index += 1
+                htmlTagList.append(htmlTag)
+
+        with open(output_file, 'w', encoding="utf-8") as html:
+            for htmlLines in htmlTagList:
+                for html_tag in htmlLines:
+                    html.write(html_tag)
+        sys.exit(0)
+
+    except FileNotFoundError:
+        sys.stderr.write(f'Missing {input_file}\n')
         sys.exit(1)
-
-    with open(markdown_file, "r") as md_file:
-        md_content = md_file.read()
-        html_content = markdown_to_html(md_content)
-
-    with open(output_file, "w") as html_file:
-        html_file.write(html_content)
-
-    sys.exit(0)
